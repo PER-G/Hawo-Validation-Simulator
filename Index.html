@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAWO Validierung Simulator 3000</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;overflow:hidden;font-family:'Comic Neue',cursive;cursor:none}
+canvas{display:block}
+#ss{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;cursor:default}
+#ss h1{font-family:'Bangers',cursive;font-size:clamp(2.5rem,5vw,4.5rem);color:#ff6b35;text-shadow:4px 4px 0 #000,-2px -2px 0 #ffd700;letter-spacing:4px;text-align:center;animation:tb 2s ease-in-out infinite}
+#ss h2{font-family:'Bangers',cursive;font-size:clamp(1.2rem,2.5vw,2rem);color:#4ecdc4;text-shadow:2px 2px 0 #000;margin-top:8px}
+#ss .sub{color:#ccc;font-size:1rem;margin:14px 0;text-align:center;max-width:560px;line-height:1.6}
+#ss .inst{background:rgba(255,255,255,.07);border:2px solid #ff6b35;border-radius:14px;padding:16px 26px;margin:10px 0;max-width:520px;color:#eee;font-size:.9rem;line-height:1.7}
+#ss .inst b{color:#ffd700}
+#sb{font-family:'Bangers',cursive;font-size:2.2rem;padding:12px 50px;background:#ff6b35;color:#fff;border:4px solid #000;border-radius:14px;cursor:pointer;margin-top:16px;text-shadow:2px 2px 0 #000;box-shadow:5px 5px 0 #000;transition:all .15s;letter-spacing:3px}
+#sb:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 #000;background:#ff8c5a}
+@keyframes tb{0%,100%{transform:scale(1)rotate(-1deg)}50%{transform:scale(1.04)rotate(1deg)}}
+#hud{position:absolute;top:0;left:0;width:100%;padding:10px 18px;display:none;justify-content:space-between;z-index:20;pointer-events:none}
+.hb{background:rgba(0,0,0,.82);border:3px solid #ff6b35;border-radius:11px;padding:7px 14px;color:#fff;font-family:'Bangers',cursive;font-size:1.15rem;letter-spacing:2px;text-shadow:1px 1px 0 #000}
+.hb .l{color:#ffd700;font-size:.82rem}.hb .bad{color:#ff4757}.hb .good{color:#2ed573}.hb .v{color:#4ecdc4}
+#stb{position:absolute;bottom:55px;left:50%;transform:translateX(-50%);display:none;z-index:20;pointer-events:none}
+#stbBar{width:300px;height:28px;border:3px solid #000;border-radius:9px;overflow:hidden;background:#333}
+#stbFill{height:100%;width:0%;border-radius:6px;transition:background .3s}
+#stbLbl{text-align:center;font-family:'Bangers',cursive;color:#fff;font-size:1.1rem;margin-top:3px;text-shadow:2px 2px 0 #000}
+#popup{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);display:none;z-index:50;text-align:center;pointer-events:none}
+#popup .b{font-family:'Bangers',cursive;font-size:2.8rem;color:#fff;text-shadow:3px 3px 0 #000;animation:pi .4s ease-out}
+@keyframes pi{0%{transform:scale(0)rotate(-20deg);opacity:0}60%{transform:scale(1.3)rotate(5deg);opacity:1}100%{transform:scale(1)rotate(0);opacity:1}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ss">
+  <h1>🏭 HAWO VALIDIERUNG</h1><h2>SIMULATOR 3000</h2>
+  <p class="sub">Verpacke Spritzen & Schläuche und schweiße sie perfekt ein. Tüte von unten zwischen die Balken schieben!</p>
+  <div class="inst">
+    <b>🖱️ Klick grüne Box:</b> Produkt nehmen → über Tüte loslassen<br>
+    <b>🖱️ Tüte zum Gerät:</b> Von unten an die Balken schieben<br>
+    <b>⬆️ Zu weit oben:</b> 🩸 Hände/Finger in den Balken!<br>
+    <b>⬇️ Zu weit unten:</b> 💨 Ins Leere geschweißt<br>
+    <b>✅ Richtige Höhe:</b> Siegelnaht an den Balken<br>
+    <b>⏱️ 20–25s</b> PERFEKT | <b>17–20s</b> OK | <b>&lt;17</b> schlecht<br>
+    <b>⚠️</b> Maus still beim Schweißen! <b>🔥 &gt;35s</b> FEUER!<br>
+    <b>🎯</b> 5 gute Tüten · max 1 schlechte · 🔊 Sound an!
+  </div>
+  <button id="sb" onclick="startGame()">▶ LOS GEHT'S!</button>
+</div>
+<div id="hud">
+  <div class="hb"><span class="l">GUTE TÜTEN:</span> <span id="gc" class="v good">0/5</span></div>
+  <div class="hb"><span class="l">SCHLECHTE:</span> <span id="bc" class="v bad">0/1</span></div>
+  <div class="hb"><span class="l">PHASE:</span> <span id="pl" class="v"></span></div>
+</div>
+<div id="stb"><div id="stbBar"><div id="stbFill"></div></div><div id="stbLbl"></div></div>
+<div id="popup"><div class="b" id="pt"></div></div>
+<div id="cal" style="position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.88);border:2px solid #ff6b35;border-radius:10px;padding:12px;z-index:60;display:none;color:#fff;font-size:13px;font-family:'Comic Neue',cursive;width:280px">
+  <div style="font-family:Bangers;font-size:16px;color:#ff6b35;margin-bottom:8px">🔧 ZONEN-KALIBRIERUNG</div>
+  <div style="margin:4px 0">🩸 Hände ab (über Balken): <span id="vH">77</span>px</div>
+  <input type="range" id="sH" min="30" max="120" value="77" style="width:100%">
+  <div style="margin:4px 0">🩸 Finger ab: <span id="vF">46</span>px</div>
+  <input type="range" id="sF" min="10" max="90" value="46" style="width:100%">
+  <div style="margin:4px 0">🫠 Produkt schmilzt: <span id="vP">12</span>px</div>
+  <input type="range" id="sP" min="0" max="60" value="12" style="width:100%">
+  <div style="margin:4px 0">✅ Perfekt (unter Balken): <span id="vI">20</span>px</div>
+  <input type="range" id="sI" min="5" max="60" value="20" style="width:100%">
+  <div style="margin-top:8px;font-size:11px;color:#aaa">Alles darunter = 💨 Ins Leere</div>
+  <button onclick="document.getElementById('cal').style.display='none'" style="margin-top:8px;padding:4px 12px;background:#ff6b35;color:#fff;border:2px solid #000;border-radius:6px;cursor:pointer;font-family:Bangers;font-size:14px">✕ SCHLIEßEN</button>
+</div>
+<button id="calBtn" onclick="document.getElementById('cal').style.display=document.getElementById('cal').style.display==='none'?'block':'none'" style="position:absolute;bottom:10px;right:10px;z-index:55;padding:6px 12px;background:rgba(0,0,0,.7);color:#ff6b35;border:2px solid #ff6b35;border-radius:8px;cursor:pointer;font-family:Bangers;font-size:14px;display:none">🔧 ZONEN</button>
+<script>
+const c=document.getElementById('c'),X=c.getContext('2d');
+function resize(){c.width=innerWidth;c.height=innerHeight}resize();addEventListener('resize',resize);
+
+// ==== AUDIO ====
+let AC=null;function iA(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)}
+function mkB(d,fn){if(!AC)return null;const b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=fn(i/AC.sampleRate);return b}
+function pl(b,v=.3){if(!AC||!b)return;const s=AC.createBufferSource();s.buffer=b;const g=AC.createGain();g.gain.value=v;s.connect(g);g.connect(AC.destination);s.start()}
+function sHiss(){pl(mkB(.4,t=>{const e=t<.02?t/.02:Math.exp(-(t-.02)*6);return((Math.random()*2-1)*.8+Math.sin(t*4500*6.28)*.12)*e}),.3)}
+function sClamp(){pl(mkB(.12,t=>{const e=Math.exp(-t*50);return Math.sin(t*800*6.28)*e*.6+Math.sin(t*1200*6.28)*e*.3+(Math.random()*2-1)*e*.2}),.35)}
+let hO=null,hG=null;
+function sHumOn(){if(!AC)return;sHumOff();hO=AC.createOscillator();hO.type='sawtooth';hO.frequency.value=55;const h2=AC.createOscillator();h2.type='sine';h2.frequency.value=110;hG=AC.createGain();hG.gain.value=0;hG.gain.linearRampToValueAtTime(.12,AC.currentTime+.5);const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=300;hO.connect(lp);h2.connect(lp);lp.connect(hG);hG.connect(AC.destination);hO.start();h2.start();hO._b=h2}
+function sHumOff(){if(hG)try{hG.gain.linearRampToValueAtTime(0,AC.currentTime+.2)}catch(e){}setTimeout(()=>{if(hO)try{hO.stop();hO._b.stop()}catch(e){}hO=null;hG=null},300)}
+function sRelease(){pl(mkB(.3,t=>Math.sin(t*3200*6.28)*Math.exp(-t*25)*.4+Math.sin(t*1800*6.28)*Math.exp(-t*15)*.25+Math.sin(t*900*6.28)*Math.exp(-t*20)*.2+(Math.random()*2-1)*Math.exp(-t*30)*.15),.3)}
+let aO=null;function sAlarmOn(){if(!AC||aO)return;aO=AC.createOscillator();aO.type='square';aO.frequency.value=800;const ag=AC.createGain();ag.gain.value=.08;const l=AC.createOscillator();l.frequency.value=3;const lg=AC.createGain();lg.gain.value=200;l.connect(lg);lg.connect(aO.frequency);aO.connect(ag);ag.connect(AC.destination);aO.start();l.start();aO._l=l}
+function sAlarmOff(){if(aO)try{aO.stop();aO._l.stop()}catch(e){}aO=null}
+function sDrop(){pl(mkB(.2,t=>(Math.sin(t*500*6.28)*.4+Math.sin(t*250*6.28)*.3)*Math.exp(-t*20)+(Math.random()*2-1)*Math.exp(-t*30)*.2),.25)}
+function sRip(){pl(mkB(.5,t=>(Math.random()*2-1)*Math.exp(-t*4)*.7*(1+.5*Math.sin(t*80*6.28))),.3)}
+function sCrush(){pl(mkB(.4,t=>(Math.random()*2-1)*Math.exp(-t*5)*.5+Math.sin(t*200*6.28)*Math.exp(-t*8)*.4),.3)}
+
+// ==== STATE ====
+const S={PICK:0,DROP:1,POS:2,SEAL:3,RES:4,HURT:5,FIRE:6,WIN:7,FIRED:8,AMB:9,MELT:10,RIP:11};
+let G;function fresh(){return{s:S.PICK,on:false,mx:0,my:0,good:0,bad:0,pib:0,need:2,held:null,bp:[],st:0,sx:0,sy:0,rt:0,rtx:'',rtc:'',fl:0,inj:'',t:0,skX:0,skY:0,flash:0,fx:[],dA:false,dP:null,dPr:0,ambX:-350,amb:false,fA:0,wA:0,bk:0,bkT:0,hum:false,alm:false,blood:[],sev:[],meltT:0,ripT:0}}G=fresh();
+
+// ==== LAYOUT ====
+function L(){const W=c.width,H=c.height,tx=W*.01,ty=H*.14,tw=W*.98,th=H*.64;
+  const bx=tx+tw*.01,by=ty+th*.08,bw=tw*.16,bh=th*.28;
+  const bagX=tx+tw*.25,bagY=ty+th*.35;
+  const devX=tx+tw*.44,devY=ty+th*.02,devW=tw*.54,devH=th*.88;
+  // barY = where the lower bar top surface is. The SEAL LINE.
+  // Player pushes bag UP from below toward barY.
+  // ABOVE barY = between the bars = DANGER
+  // AT barY = seal zone = GOOD
+  // BELOW barY = too far away = empty
+  const barY=devY+devH*.42;
+  const upperBarOpenY=devY+devH*.06;
+  return{W,H,tx,ty,tw,th,bx,by,bw,bh,bagX,bagY,devX,devY,devW,devH,barY,upperBarOpenY}}
+
+const OL='#1a1a2e';
+function ct(t,x,y,sz=20,col='#fff'){X.font=`${sz}px 'Bangers',cursive`;X.textAlign='center';X.textBaseline='middle';X.strokeStyle='#000';X.lineWidth=Math.max(2,sz/5);X.lineJoin='round';X.strokeText(t,x,y);X.fillStyle=col;X.fillText(t,x,y)}
+function addFx(t,x,y,col='#ffd700',sz=38){G.fx.push({t,x,y,col,sz,life:1})}
+function drawFx(){G.fx=G.fx.filter(e=>{e.life-=.017;if(e.life<=0)return false;X.save();X.globalAlpha=e.life;X.translate(e.x,e.y-(1-e.life)*28);const s=1+(1-e.life)*.35;X.scale(s,s);ct(e.t,0,0,e.sz,e.col);X.restore();return true})}
+function popup(t,d=2000){const el=document.getElementById('popup');document.getElementById('pt').textContent=t;el.style.display='block';setTimeout(()=>el.style.display='none',d)}
+
+// ==== HAND (blocky stylized, clear fingers from back, like comic) ====
+function drawHand(x,y,mirror=false,sc=1){
+  X.save();X.translate(x,y);if(mirror)X.scale(-1,1);X.scale(sc,sc);
+  const S='#b07848',F='#e8ba8a',D='#d4a070',N='#f4dcc8';
+  // Sleeve cuff
+  X.fillStyle='#e0e8f2';X.strokeStyle='#a8b8c8';X.lineWidth=2;
+  X.beginPath();X.roundRect(-18,62,36,22,5);X.fill();X.stroke();
+  // Wrist
+  X.fillStyle=D;X.strokeStyle=S;X.lineWidth=1.8;
+  X.beginPath();X.roundRect(-14,36,28,28,4);X.fill();X.stroke();
+  // Palm (back of hand)
+  X.fillStyle=F;X.strokeStyle=S;X.lineWidth=2;
+  X.beginPath();X.roundRect(-16,4,32,36,6);X.fill();X.stroke();
+  // Knuckle bumps
+  X.fillStyle=D;
+  for(let i=0;i<4;i++){X.beginPath();X.ellipse(-10+i*7,6,3,2.5,0,0,Math.PI*2);X.fill();}
+  // Tendons on back of hand
+  X.strokeStyle='#c89868';X.lineWidth=.7;
+  for(let i=0;i<4;i++){X.beginPath();X.moveTo(-10+i*7,8);X.lineTo(-10+i*7,28);X.stroke();}
+  // 4 Fingers - long rectangles with rounded tips
+  const fw=[7,7,7,6.5],fl=[30,34,32,26],fx=[-13.5,-6.5,.5,7.5];
+  for(let i=0;i<4;i++){
+    // Finger body
+    X.fillStyle=F;X.strokeStyle=S;X.lineWidth=1.5;
+    X.beginPath();X.roundRect(fx[i],-fl[i]+6,fw[i],fl[i],3);X.fill();X.stroke();
+    // Joint line
+    X.strokeStyle=D;X.lineWidth=1;
+    X.beginPath();X.moveTo(fx[i]+1,-fl[i]/2+6);X.lineTo(fx[i]+fw[i]-1,-fl[i]/2+6);X.stroke();
+    // Second joint
+    X.beginPath();X.moveTo(fx[i]+1,-fl[i]*.25+6);X.lineTo(fx[i]+fw[i]-1,-fl[i]*.25+6);X.stroke();
+    // Nail
+    X.fillStyle=N;X.strokeStyle='#d4b898';X.lineWidth=.8;
+    X.beginPath();X.roundRect(fx[i]+1,-fl[i]+7,fw[i]-2,8,2);X.fill();X.stroke();
+  }
+  // Thumb (on the side, angled out)
+  X.fillStyle=F;X.strokeStyle=S;X.lineWidth=1.5;
+  X.save();X.translate(16,18);X.rotate(.35);
+  X.beginPath();X.roundRect(-3.5,-22,8,24,3);X.fill();X.stroke();
+  // Thumb joint
+  X.strokeStyle=D;X.lineWidth=1;X.beginPath();X.moveTo(-2,-10);X.lineTo(3,-10);X.stroke();
+  // Thumb nail
+  X.fillStyle=N;X.strokeStyle='#d4b898';X.lineWidth=.8;
+  X.beginPath();X.roundRect(-2,-21,6,7,2);X.fill();X.stroke();
+  X.restore();
+  X.restore();
+}
+
+// ==== PRODUCTS, BAG, BOX ====
+function drawProd(x,y,type,sc=1){X.save();X.translate(x,y);X.scale(sc,sc);
+  if(type==='syringe'){X.fillStyle='#e4eef8';X.strokeStyle=OL;X.lineWidth=2.5;X.lineJoin='round';X.beginPath();X.roundRect(-38,-10,76,20,4);X.fill();X.stroke();X.fillStyle='#bcc8d8';X.beginPath();X.roundRect(-56,-7,22,14,3);X.fill();X.stroke();X.strokeStyle='#7a8899';X.lineWidth=2;X.beginPath();X.moveTo(38,0);X.lineTo(62,0);X.stroke();X.fillStyle='rgba(100,180,255,.2)';X.fillRect(-12,-7,40,14)}
+  else{X.strokeStyle='#c8b898';X.lineWidth=6;X.lineCap='round';X.beginPath();for(let a=0;a<Math.PI*7;a+=.12){const r=26-a*1.5;if(r<2)break;const px=Math.cos(a)*r,py=Math.sin(a)*r*.55;a===0?X.moveTo(px,py):X.lineTo(px,py)}X.stroke();X.strokeStyle=OL;X.lineWidth=1.5;X.beginPath();for(let a=0;a<Math.PI*7;a+=.12){const r=26-a*1.5;if(r<2)break;const px=Math.cos(a)*r,py=Math.sin(a)*r*.55;a===0?X.moveTo(px,py):X.lineTo(px,py)}X.stroke()}X.restore()}
+
+function drawMelt(x,y,p){X.save();X.translate(x,y);X.globalAlpha=1-p*.3;X.fillStyle=`rgb(${200+p*55},${180-p*80},${100-p*100})`;X.strokeStyle='#885522';X.lineWidth=2;
+  X.beginPath();X.moveTo(-35,-8+p*5);X.quadraticCurveTo(-20,-12+p*15,0,-6+p*20);X.quadraticCurveTo(20,-10+p*18,35,-5+p*8);X.lineTo(35+p*5,10+p*12);X.quadraticCurveTo(15,14+p*15,-5,12+p*20);X.quadraticCurveTo(-25,15+p*10,-38,8+p*5);X.closePath();X.fill();X.stroke();
+  for(let i=0;i<3;i++){X.fillStyle=`rgba(${180+p*40},${120-p*40},${60-p*40},${.5+p*.3})`;X.beginPath();X.ellipse(-15+i*15,12+p*20+Math.sin(G.t*3+i)*5,3+p*3,4+p*5,0,0,Math.PI*2);X.fill()}
+  if(p>.3)for(let i=0;i<4;i++){X.fillStyle=`rgba(200,200,200,${.3*Math.max(0,1-((G.t*2+i)%1))})`;X.beginPath();X.arc(-20+i*14+Math.sin(G.t*2+i)*8,-15-(G.t*15)%30-i*6,4+i*2,0,Math.PI*2);X.fill()}
+  X.globalAlpha=1;X.restore()}
+
+function drawBag(x,y,open,prods,sc=1){X.save();X.translate(x,y);X.scale(sc,sc);const bw=120,bh=110;
+  X.fillStyle='rgba(0,0,0,.05)';X.beginPath();X.ellipse(3,bh/2+10,bw/2+6,20,0,0,Math.PI*2);X.fill();
+  X.fillStyle='rgba(200,218,238,.48)';X.strokeStyle='rgba(130,158,185,.75)';X.lineWidth=2;
+  X.beginPath();X.moveTo(-bw/2,-4);X.lineTo(bw/2,-4);X.lineTo(bw/2-7,bh);X.lineTo(-bw/2+7,bh);X.closePath();X.fill();X.stroke();
+  if(open){X.strokeStyle='rgba(255,255,255,.4)';X.lineWidth=1.5;X.setLineDash([5,3]);X.beginPath();X.moveTo(-bw/2+7,2);X.lineTo(bw/2-7,2);X.stroke();X.setLineDash([])}
+  for(let i=0;i<prods.length;i++)drawProd(i*24-14,38+i*12,prods[i],.36);
+  X.fillStyle='rgba(255,255,255,.07)';X.fillRect(-bw/2+14,6,16,bh-16);X.restore()}
+
+function drawTorn(x,y,p){X.save();X.translate(x,y);const m=Math.min(1,p);
+  X.fillStyle='rgba(200,218,238,.4)';X.strokeStyle='rgba(130,158,185,.7)';X.lineWidth=2;
+  X.beginPath();X.moveTo(-55,-4);X.lineTo(-5+m*10,-4);X.lineTo(-15+m*5,50-m*10);X.lineTo(-50,90);X.closePath();X.fill();X.stroke();
+  X.beginPath();X.moveTo(5-m*10,-4);X.lineTo(55,-4);X.lineTo(50,90);X.lineTo(15-m*5,50-m*10);X.closePath();X.fill();X.stroke();
+  drawProd(-20-m*15,40+m*30,'syringe',.3*(1-m*.5));drawProd(15+m*12,45+m*35,'tube',.3*(1-m*.5));X.restore()}
+
+function drawBox(l){const{bx,by,bw,bh}=l;const d=bh*.5,sk=bh*.22;
+  X.fillStyle='#2d8a4e';X.strokeStyle=OL;X.lineWidth=2.5;X.lineJoin='round';
+  X.beginPath();X.moveTo(bx+sk,by);X.lineTo(bx+bw+sk,by);X.lineTo(bx+bw-sk,by+bh);X.lineTo(bx-sk,by+bh);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#238040';X.beginPath();X.moveTo(bx+sk,by);X.lineTo(bx-sk,by+bh);X.lineTo(bx-sk,by+bh+d);X.lineTo(bx+sk,by+d);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#34a85a';X.beginPath();X.moveTo(bx-sk,by+bh);X.lineTo(bx+bw-sk,by+bh);X.lineTo(bx+bw-sk,by+bh+d);X.lineTo(bx-sk,by+bh+d);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#2a9550';X.beginPath();X.moveTo(bx+bw+sk,by);X.lineTo(bx+bw-sk,by+bh);X.lineTo(bx+bw-sk,by+bh+d);X.lineTo(bx+bw+sk,by+d);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#258a45';const fH=d*.4;X.beginPath();X.moveTo(bx-sk,by+bh+d-fH);X.lineTo(bx+bw-sk,by+bh+d-fH);X.lineTo(bx+bw-sk,by+bh+d);X.lineTo(bx-sk,by+bh+d);X.closePath();X.fill();X.stroke();
+  X.font='bold 11px "Comic Neue",cursive';X.fillStyle='#fff';X.textAlign='center';X.fillText('PRODUKTE',bx+bw*.35,by+bh+d-fH*.3);
+  if(G.s===S.PICK&&G.pib<G.need){
+    // Products are always: first=syringe, second=tube
+    const allProds=['syringe','tube'];
+    const remaining=allProds.filter((_,i)=>i>=G.pib);
+    if(!G.held){
+      // Show all remaining products
+      remaining.forEach((p,i)=>drawProd(bx+bw*(.3+i*.35),by+bh*(.5+i*.05),p,.55-.1*i));
+    } else {
+      // One is held - show remaining minus the held one
+      const inBox=remaining.filter(p=>p!==G.held);
+      inBox.forEach((p,i)=>drawProd(bx+bw*.48,by+bh*.52,p,.5));
+    }
+  }}
+
+// ==== DEVICE ====
+function drawDevBase(l){const{devX,devY,devW,devH,barY}=l;const bT=barY+14,bB=devY+devH,bH=bB-bT;
+  X.fillStyle='#d4d8de';X.strokeStyle=OL;X.lineWidth=3;X.lineJoin='round';
+  X.beginPath();X.moveTo(devX+8,bT);X.lineTo(devX+devW-8,bT);X.lineTo(devX+devW-20,bB);X.lineTo(devX+20,bB);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#e0e4ea';X.beginPath();X.moveTo(devX+8,bT);X.lineTo(devX+devW-8,bT);X.lineTo(devX+devW-2,bT-14);X.lineTo(devX+2,bT-14);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#a8adb5';X.strokeStyle='#8a8f97';X.lineWidth=1.5;const gY=bT+bH*.35;
+  X.beginPath();X.moveTo(devX+30,gY);X.lineTo(devX+devW-30,gY);X.lineTo(devX+devW-35,gY+bH*.18);X.lineTo(devX+35,gY+bH*.18);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#cc3333';X.font='bold 13px "Comic Neue",cursive';X.textAlign='center';X.fillText('hawo',devX+devW*.45,bB-12);
+  // Lower bar
+  X.fillStyle='#c8ccd2';X.strokeStyle=OL;X.lineWidth=2.5;
+  X.beginPath();X.moveTo(devX+2,barY);X.lineTo(devX+devW-2,barY);X.lineTo(devX+devW-2,barY+12);X.lineTo(devX+2,barY+12);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#d8dce2';X.beginPath();X.moveTo(devX+2,barY);X.lineTo(devX+devW-2,barY);X.lineTo(devX+devW+4,barY-6);X.lineTo(devX-4,barY-6);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#a08060';X.fillRect(devX+20,barY-5,devW-40,4);
+  X.fillStyle='#1a1a1a';X.strokeStyle=OL;X.lineWidth=2;
+  X.beginPath();X.roundRect(devX-6,barY-8,22,24,3);X.fill();X.stroke();
+  X.beginPath();X.roundRect(devX+devW-16,barY-8,22,24,3);X.fill();X.stroke();
+  for(const lx of[devX+devW*.28,devX+devW*.52,devX+devW*.72]){X.fillStyle='#888';X.strokeStyle=OL;X.lineWidth=1.5;X.beginPath();X.roundRect(lx-4,bT+8,8,bH*.25,2);X.fill();X.stroke();X.fillStyle='#666';X.beginPath();X.roundRect(lx-6,bT+bH*.25+4,12,8,3);X.fill();X.stroke()}
+  const px=devX+devW*.3,py=l.ty+l.th+28;X.strokeStyle='#333';X.lineWidth=2.5;X.lineCap='round';X.beginPath();X.moveTo(devX+devW*.8,bB+5);X.bezierCurveTo(devX+devW*.82,py-5,px+50,py-10,px+52,py+3);X.stroke();X.fillStyle='#1a1a1a';X.strokeStyle=OL;X.lineWidth=2.5;X.lineJoin='round';X.beginPath();X.roundRect(px,py,58,14,4);X.fill();X.stroke();X.fillStyle='#2a2a2a';X.beginPath();X.roundRect(px+4,py-5,50,7,3);X.fill();X.stroke()}
+
+function drawUpBar(l){const{devX,devW,barY,upperBarOpenY}=l;const cY=barY-12,ubY=upperBarOpenY+(cY-upperBarOpenY)*G.bk,ubH=12;
+  X.fillStyle='#c8ccd2';X.strokeStyle=OL;X.lineWidth=2.5;X.lineJoin='round';
+  X.beginPath();X.moveTo(devX+2,ubY);X.lineTo(devX+devW-2,ubY);X.lineTo(devX+devW-2,ubY+ubH);X.lineTo(devX+2,ubY+ubH);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#b8bcc2';X.fillRect(devX+4,ubY+ubH,devW-8,3);
+  X.fillStyle='#dde0e6';X.beginPath();X.moveTo(devX+2,ubY);X.lineTo(devX+devW-2,ubY);X.lineTo(devX+devW+4,ubY-7);X.lineTo(devX-4,ubY-7);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#a08060';X.fillRect(devX+20,ubY+ubH,devW-40,4);
+  X.fillStyle='#1a1a1a';X.strokeStyle=OL;X.lineWidth=2;
+  X.beginPath();X.roundRect(devX-6,ubY-4,22,ubH+12,3);X.fill();X.stroke();
+  X.beginPath();X.roundRect(devX+devW-16,ubY-4,22,ubH+12,3);X.fill();X.stroke();
+  for(const bx of[devX+devW*.3,devX+devW*.5,devX+devW*.7]){X.fillStyle='#aaa';X.strokeStyle=OL;X.lineWidth=1;X.beginPath();X.roundRect(bx-5,ubY-8,10,6,2);X.fill();X.stroke()}
+  if(G.s===S.SEAL&&G.st>.5&&G.bk>.8){X.fillStyle=`rgba(255,${Math.max(30,160-G.st*4)},0,${Math.min(.6,G.st/12)})`;X.fillRect(devX+22,ubY+ubH+2,devW-44,Math.max(2,barY-(ubY+ubH)))}
+  return ubY}
+
+// ==== BLOOD ====
+function addBlood(cx,cy,n=20){for(let i=0;i<n;i++)G.blood.push({x:cx,y:cy,vx:(Math.random()-.5)*14,vy:(Math.random()-.5)*12-4,r:2+Math.random()*6,life:1+Math.random()*2,c:Math.random()>.3?'#cc2233':'#881122'})}
+function drawBlood(dt){G.blood=G.blood.filter(b=>{b.x+=b.vx;b.y+=b.vy;b.vy+=.25;b.life-=dt;if(b.life<=0)return false;X.fillStyle=b.c;X.globalAlpha=Math.min(1,b.life);X.beginPath();X.arc(b.x,b.y,b.r,0,Math.PI*2);X.fill();X.globalAlpha=1;return true})}
+function drawSev(){G.sev.forEach(s=>{X.save();X.translate(s.x,s.y);X.rotate(s.rot);
+  if(s.type==='finger'){
+    // Finger segment with nail
+    X.fillStyle='#e8ba8a';X.strokeStyle='#b07848';X.lineWidth=1.5;
+    X.beginPath();X.roundRect(-3.5,-18,7,30,3);X.fill();X.stroke();
+    // Joint line
+    X.strokeStyle='#d4a070';X.lineWidth=1;
+    X.beginPath();X.moveTo(-2,-5);X.lineTo(2,-5);X.stroke();
+    // Nail
+    X.fillStyle='#f4dcc8';X.strokeStyle='#d4b898';X.lineWidth=.7;
+    X.beginPath();X.roundRect(-2,-17,5,7,2);X.fill();X.stroke();
+    // Bloody cut end
+    X.fillStyle='#cc2233';X.beginPath();X.ellipse(0,12,4.5,3.5,0,0,Math.PI*2);X.fill();
+    X.fillStyle='#aa1122';X.beginPath();X.ellipse(0,13,3,2,0,0,Math.PI*2);X.fill();
+  }else{
+    drawHand(0,0,s.mir,.45);
+    X.fillStyle='#cc2233';X.beginPath();X.ellipse(0,50,14,7,0,0,Math.PI*2);X.fill();
+    X.fillStyle='#aa1122';X.beginPath();X.ellipse(0,52,10,5,0,0,Math.PI*2);X.fill();
+  }
+  X.restore();s.x+=s.vx;s.y+=s.vy;s.vy+=.15;s.rot+=s.vr})}
+
+// ==== ZONES (based on reference screenshots - FINAL FIX) ====
+// barY = top of lower bar (brown teflon heating strip)
+// 
+// Screen layout top to bottom:
+//   [upper bar]  ← way up
+//   [gap between bars]  ← HANDS OFF (hands are between bars)
+//   [lower bar / barY]  ← FINGERS OFF (fingertips touch bar)
+//   [just below bar]    ← PERFECT (bag sealed at heating strip)
+//   [further below]     ← PRODUCT DAMAGE (too low, heat hits product)
+//   [way below]         ← EMPTY (ins Leere, not reaching bar at all)
+// Zone offsets (adjustable via calibration panel)
+let zH=77,zF=46,zP=12,zI=20;
+function getZone(my,l){
+  const by=l.barY;
+  if(my<by-zH)return'hands';
+  if(my<by-zF)return'fingers';
+  if(my<by-zP)return'product';
+  if(my<=by+zI)return'ideal';
+  return'empty';
+}
+// Draw zone indicators only when calibration panel is visible
+function drawZones(l){
+  if(G.s!==S.POS||document.getElementById('cal').style.display==='none')return;
+  const{devX,devW,barY}=l;const x1=devX+16,x2=devX+devW-16;
+  const zones=[
+    {y:barY-zH,c:'#990000',t:'Hände'},
+    {y:barY-zF,c:'#cc0000',t:'Finger'},
+    {y:barY-zP,c:'#ff6600',t:'Produkt'},
+    {y:barY,c:'#2ed573',t:'───PERFEKT───'},
+    {y:barY+zI,c:'#ffa502',t:'Ins Leere'}
+  ];
+  X.globalAlpha=.35;X.lineWidth=1;X.setLineDash([3,3]);
+  for(const z of zones){X.strokeStyle=z.c;X.beginPath();X.moveTo(x1,z.y);X.lineTo(x2,z.y);X.stroke();
+    X.font='bold 9px "Comic Neue"';X.fillStyle=z.c;X.textAlign='right';X.fillText(z.t,x1-4,z.y+3)}
+  X.setLineDash([]);X.globalAlpha=1;
+}
+
+function inDev(mx,l){return mx>l.devX+15&&mx<l.devX+l.devW-15}
+function inBox(mx,my,l){return mx>l.bx-5&&mx<l.bx+l.bw+10&&my>l.by-5&&my<l.by+l.bh*1.6+5}
+function inBag(mx,my,l){return Math.abs(mx-l.bagX)<65&&Math.abs(my-l.bagY-30)<58}
+function onFlr(my,l){return my>l.ty+l.th+22}
+
+function drawFlr(l){X.fillStyle='#dde2ea';X.fillRect(0,0,l.W,l.H);X.strokeStyle='#c5ccd5';X.lineWidth=1;for(let x=0;x<l.W;x+=50)for(let y=0;y<l.H;y+=50)X.strokeRect(x,y,50,50)}
+function drawTbl(l){const sk=l.th*.25;X.fillStyle='rgba(0,0,0,.08)';X.beginPath();X.moveTo(l.tx+sk+10,l.ty+10);X.lineTo(l.tx+l.tw+sk+10,l.ty+10);X.lineTo(l.tx+l.tw-sk+10,l.ty+l.th+10);X.lineTo(l.tx-sk+10,l.ty+l.th+10);X.closePath();X.fill();
+  X.fillStyle='#a0b8cc';X.strokeStyle=OL;X.lineWidth=4;X.lineJoin='round';X.beginPath();X.moveTo(l.tx+sk,l.ty);X.lineTo(l.tx+l.tw+sk,l.ty);X.lineTo(l.tx+l.tw-sk,l.ty+l.th);X.lineTo(l.tx-sk,l.ty+l.th);X.closePath();X.fill();X.stroke();
+  X.fillStyle='#7a96b0';X.beginPath();X.moveTo(l.tx-sk,l.ty+l.th);X.lineTo(l.tx+l.tw-sk,l.ty+l.th);X.lineTo(l.tx+l.tw-sk,l.ty+l.th+16);X.lineTo(l.tx-sk,l.ty+l.th+16);X.closePath();X.fill();X.stroke()}
+function drawFire(l){if(G.fl<=0)return;const{devX,devY,devW,devH}=l;for(let i=0;i<G.fl*4;i++){X.fillStyle=`rgba(100,100,100,${Math.max(0,.28-i*.022)})`;X.beginPath();X.arc(devX+devW*.2+Math.sin(G.t*1.5+i*.8)*devW*.3,devY-12-i*14-(G.t*30)%90,7+i*4.5,0,Math.PI*2);X.fill()}
+  if(G.fl>=3){for(let i=0;i<G.fl*7;i++){const cols=['#ff6b35','#ff4500','#ffd700','#ff0000','#ff8c00'];X.fillStyle=cols[~~(Math.random()*cols.length)];X.beginPath();X.arc(devX+devW*.08+Math.random()*devW*.84,devY+devH*.15-Math.random()*60*(G.fl/4),4+Math.random()*14,0,Math.PI*2);X.fill()}X.fillStyle=`rgba(255,40,0,${Math.min(.2,G.fl*.03)})`;X.fillRect(0,0,l.W,l.H)}}
+function drawAmb(l){if(!G.amb)return;X.save();X.translate(G.ambX,l.H*.52);X.fillStyle='#fff';X.strokeStyle=OL;X.lineWidth=3;X.lineJoin='round';X.beginPath();X.roundRect(-72,-33,144,52,7);X.fill();X.stroke();X.fillStyle='#e00';X.fillRect(-72,-14,144,13);X.fillRect(17,-30,7,20);X.fillRect(10,-23,21,7);X.fillStyle='#222';X.beginPath();X.arc(-40,22,12,0,Math.PI*2);X.fill();X.stroke();X.beginPath();X.arc(40,22,12,0,Math.PI*2);X.fill();X.stroke();const lc=Math.sin(G.t*10)>0?'#f00':'#00f';X.fillStyle=lc;X.beginPath();X.arc(-28,-40,7,0,Math.PI*2);X.fill();X.stroke();X.fillStyle=lc==='#f00'?'#00f':'#f00';X.beginPath();X.arc(28,-40,7,0,Math.PI*2);X.fill();X.stroke();ct('KRANKENWAGEN',0,-52,13,'#e00');X.restore()}
+function drawCur(){if([S.WIN,S.FIRED,S.AMB].includes(G.s))return;X.strokeStyle='#ff6b35';X.lineWidth=2;X.beginPath();X.arc(G.mx,G.my,10,0,Math.PI*2);X.stroke();X.beginPath();X.moveTo(G.mx-15,G.my);X.lineTo(G.mx-5,G.my);X.moveTo(G.mx+5,G.my);X.lineTo(G.mx+15,G.my);X.moveTo(G.mx,G.my-15);X.lineTo(G.mx,G.my-5);X.moveTo(G.mx,G.my+5);X.lineTo(G.mx,G.my+15);X.stroke()}
+
+// HUD
+function uHUD(){document.getElementById('gc').textContent=`${G.good}/5`;document.getElementById('bc').textContent=`${G.bad}/1`;document.getElementById('bc').className=G.bad>=1?'v bad':'v';
+  const p={[S.PICK]:'📦 Produkt nehmen',[S.DROP]:'🛍️ Einlegen...',[S.POS]:'🎯 Tüte positionieren',[S.SEAL]:'🔥 SCHWEISSEN!',[S.RES]:'📋 Ergebnis',[S.HURT]:'🩸 VERLETZUNG!',[S.FIRE]:'🔥 FEUER!',[S.WIN]:'🏆 GEWONNEN!',[S.FIRED]:'📄 GEKÜNDIGT!',[S.AMB]:'🚑 KRANKENWAGEN!',[S.MELT]:'🫠 SCHMILZT!',[S.RIP]:'💥 GERISSEN!'};document.getElementById('pl').textContent=p[G.s]||''}
+function uSBar(){const el=document.getElementById('stb'),fl=document.getElementById('stbFill'),lb=document.getElementById('stbLbl');if(G.s!==S.SEAL){el.style.display='none';return}el.style.display='block';fl.style.width=Math.min(100,(G.st/40)*100)+'%';
+  if(G.st<17){fl.style.background='#ff4757';lb.textContent='ZU KURZ!';lb.style.color='#ff4757'}else if(G.st<20){fl.style.background='#ffa502';lb.textContent='OK...';lb.style.color='#ffa502'}else if(G.st<=25){fl.style.background='#2ed573';lb.textContent='✨ PERFEKT! ✨';lb.style.color='#2ed573'}else if(G.st<=30){fl.style.background='#ff6b35';lb.textContent='⚠️ ZU LANG!';lb.style.color='#ff6b35'}else if(G.st<=35){fl.style.background='#f00';lb.textContent='💨 DAMPF!!!';lb.style.color='#f00'}else{fl.style.background='#f00';lb.textContent='🔥🔥 FEUER!! 🔥🔥';lb.style.color='#f00'}}
+
+function fail(txt,col,ft,fc,fs){addFx(ft,G.mx,G.my,fc,fs);G.bad++;G.s=S.RES;G.rtx=txt;G.rtc=col;G.rt=2.8;if(G.bad>=2){G.s=S.FIRED;G.fA=0}}
+function newBag(){G.pib=0;G.bp=[];G.st=0;G.fl=0;G.held=null;G.s=S.PICK;G.blood=[];G.sev=[]}
+
+// ==== MAIN LOOP ====
+let lt=0;
+function loop(t){const dt=Math.min(.05,(t-lt)/1000);lt=t;G.t+=dt;if(!G.on){requestAnimationFrame(loop);return}
+  const l=L();X.clearRect(0,0,l.W,l.H);X.save();X.translate(G.skX,G.skY);G.skX*=.87;G.skY*=.87;
+  if(G.s===S.SEAL||G.s===S.HURT||G.s===S.MELT)G.bkT=1;else G.bkT=0;
+  G.bk+=(G.bkT-G.bk)*.08;
+  drawFlr(l);drawTbl(l);
+  if(G.fl>3){if(Math.sin(G.t*8)>0){X.fillStyle='rgba(255,0,0,.04)';X.fillRect(0,0,l.W,l.H)}ct('🚨 FEUERALARM!',l.W-90,55,18,'#f00');if(!G.alm){sAlarmOn();G.alm=true}}else if(G.alm){sAlarmOff();G.alm=false}
+  
+  // DRAW ORDER: DeviceBase(with lower bar) → middle layer (hands+bag BETWEEN bars) → upper bar ON TOP
+  switch(G.s){
+    case S.PICK:{drawDevBase(l);drawUpBar(l);drawBag(l.bagX,l.bagY,true,G.bp);drawBox(l);
+      if(inBox(G.mx,G.my,l)&&!G.held&&G.pib<G.need){X.strokeStyle='#ffd700';X.lineWidth=2.5;X.setLineDash([5,3]);X.strokeRect(l.bx-6,l.by-6,l.bw+12,l.bh*1.6+12);X.setLineDash([]);ct('KLICK!',l.bx+l.bw/2,l.by-15,17,'#ffd700')}
+      if(G.held){drawProd(G.mx,G.my,G.held,.85);drawHand(G.mx-60,G.my+60,false,1);drawHand(G.mx+60,G.my+60,true,1);
+        if(inBag(G.mx,G.my,l)){X.strokeStyle='#2ed573';X.lineWidth=2;X.setLineDash([4,3]);X.beginPath();X.ellipse(l.bagX,l.bagY+30,62,50,0,0,Math.PI*2);X.stroke();X.setLineDash([])}}
+      else{drawHand(G.mx-50,G.my+55,false,.95);drawHand(G.mx+50,G.my+55,true,.95)}break;}
+    case S.DROP:{drawDevBase(l);drawUpBar(l);drawBag(l.bagX,l.bagY,true,G.bp);drawBox(l);
+      if(G.dA){G.dPr+=dt*3;const p=Math.min(1,G.dPr);drawProd(G.mx+(l.bagX-G.mx)*p,G.my+(l.bagY+28-G.my)*p,G.dP,.6+.2*(1-p));
+        if(p>=1){G.dA=false;G.bp.push(G.dP);G.pib++;addFx('PLOP!',l.bagX,l.bagY,'#4ecdc4',28);sDrop();
+          if(G.pib>=G.need){G.s=S.POS;popup('🎯 Tüte von unten an die Balken!',1800)}else G.s=S.PICK}}
+      drawHand(G.mx-50,G.my+55,false,.95);drawHand(G.mx+50,G.my+55,true,.95);break;}
+    case S.POS:{
+      drawDevBase(l);drawBox(l);
+      // Bag+hands between bars (drawn before upper bar)
+      drawBag(G.mx,G.my-20,false,G.bp,1);
+      drawHand(G.mx-65,G.my+62,false,1.05);drawHand(G.mx+65,G.my+62,true,1.05);
+      drawUpBar(l); // Upper bar ON TOP
+      drawZones(l); // Show zone boundary lines
+      if(inDev(G.mx,l)){const z=getZone(G.my,l);let zc,zt;
+        switch(z){case'empty':zc='#ffa502';zt='💨 INS LEERE!';break;case'product':zc='#ff6600';zt='🫠 PRODUKT SCHMILZT!';break;
+          case'ideal':zc='#2ed573';zt='✅ PERFEKT - KLICK!';break;case'fingers':zc='#cc0000';zt='🩸 FINGER AB!!';break;
+          case'hands':zc='#990000';zt='🩸 HÄNDE AB!!!';break;}
+        ct(zt,l.devX+l.devW/2,l.devY-16,21,zc);
+        X.strokeStyle=zc;X.lineWidth=2;X.setLineDash([4,3]);X.beginPath();X.moveTo(l.devX+15,G.my);X.lineTo(l.devX+l.devW-15,G.my);X.stroke();X.setLineDash([])}break;}
+    case S.SEAL:{G.st+=dt;const md=Math.hypot(G.mx-G.sx,G.my-G.sy);
+      if(md>22&&G.st>.3){sHumOff();G.hum=false;sRip();G.s=S.RIP;G.ripT=0;G.skX=(Math.random()-.5)*18;G.skY=(Math.random()-.5)*18;break;}
+      if(G.st>30)G.fl=Math.min(5,(G.st-30)/2);
+      if(G.st>35){G.s=S.FIRE;G.fl=5;sHumOff();G.hum=false;addFx('🔥 FEUER!!!',l.W/2,l.H/3,'#ff0000',52);G.skX=14;G.skY=14;break;}
+      drawDevBase(l);drawBag(G.sx,G.sy-20,false,G.bp,1);drawHand(G.sx-65,G.sy+62,false,1.05);drawHand(G.sx+65,G.sy+62,true,1.05);drawUpBar(l);drawBox(l);drawFire(l);uSBar();break;}
+    case S.MELT:{G.meltT+=dt;drawDevBase(l);drawMelt(G.sx,G.sy-10,G.meltT);drawHand(G.sx-65,G.sy+62,false,1.05);drawHand(G.sx+65,G.sy+62,true,1.05);drawUpBar(l);drawBox(l);
+      ct('🫠 PRODUKTE SCHMELZEN!',l.W/2,l.H*.15,40,'#ff6600');
+      if(G.meltT>2.5){G.bkT=0;G.bad++;G.s=S.RES;G.rtx='PRODUKTE GESCHMOLZEN!';G.rtc='#ff6600';G.rt=2;if(G.bad>=2){G.s=S.FIRED;G.fA=0}}break;}
+    case S.RIP:{G.ripT+=dt;drawDevBase(l);drawTorn(G.sx,G.sy-20,G.ripT);drawHand(G.sx-65,G.sy+62,false,1.05);drawHand(G.sx+65,G.sy+62,true,1.05);drawUpBar(l);drawBox(l);
+      ct('💥 TÜTE GERISSEN!',l.W/2,l.H*.15,42,'#ff4757');
+      if(G.ripT>2){G.bkT=0;G.bad++;G.s=S.RES;G.rtx='TÜTE GERISSEN!';G.rtc='#ff4757';G.rt=2;if(G.bad>=2){G.s=S.FIRED;G.fA=0}}break;}
+    case S.RES:{G.rt-=dt;drawDevBase(l);drawUpBar(l);drawBox(l);drawBag(l.bagX,l.bagY,true,[]);ct(G.rtx,l.W/2,l.H/2-30,40,G.rtc);drawHand(G.mx-50,G.my+55,false,.95);drawHand(G.mx+50,G.my+55,true,.95);
+      if(G.rt<=0){if(G.good>=5){G.s=S.WIN;G.wA=0}else newBag()}break;}
+    case S.HURT:{drawDevBase(l);const cx=l.devX+l.devW*.5,cy=l.barY;
+      drawBlood(dt);drawSev();
+      if(G.inj==='fingers'){
+        // Draw hands WITHOUT fingers (stumps)
+        const drawStumpHand=(hx,hy,mir,sc)=>{
+          X.save();X.translate(hx,hy);if(mir)X.scale(-1,1);X.scale(sc,sc);
+          const S2='#b07848',F2='#e8ba8a',D2='#d4a070';
+          // Sleeve
+          X.fillStyle='#e0e8f2';X.strokeStyle='#a8b8c8';X.lineWidth=2;
+          X.beginPath();X.roundRect(-18,62,36,22,5);X.fill();X.stroke();
+          // Wrist
+          X.fillStyle=D2;X.strokeStyle=S2;X.lineWidth=1.8;
+          X.beginPath();X.roundRect(-14,36,28,28,4);X.fill();X.stroke();
+          // Palm (no fingers - cut at top)
+          X.fillStyle=F2;X.strokeStyle=S2;X.lineWidth=2;
+          X.beginPath();X.roundRect(-16,4,32,36,6);X.fill();X.stroke();
+          // Bloody stumps where fingers were
+          X.fillStyle='#cc2233';
+          for(let i=0;i<4;i++){X.beginPath();X.ellipse(-10+i*7,5,4,3,0,0,Math.PI*2);X.fill();}
+          // Blood dripping
+          X.fillStyle='#aa1122';
+          for(let i=0;i<4;i++){
+            const drip=Math.sin(G.t*2+i)*3;
+            X.beginPath();X.ellipse(-10+i*7,2-drip,2.5,4+Math.sin(G.t*3+i)*2,0,0,Math.PI*2);X.fill();
+          }
+          X.restore();
+        };
+        drawStumpHand(cx-55,cy+35,false,.95);
+        drawStumpHand(cx+55,cy+35,true,.95);
+        addBlood(cx-15,cy-5,1);addBlood(cx+15,cy-5,1);
+      }else{
+        // Arm stumps (hands completely off)
+        X.fillStyle='#e8ba8a';X.strokeStyle=OL;X.lineWidth=3;
+        X.beginPath();X.roundRect(cx-50,cy+20,26,35,6);X.fill();X.stroke();
+        X.beginPath();X.roundRect(cx+24,cy+20,26,35,6);X.fill();X.stroke();
+        // Bloody ends
+        X.fillStyle='#cc2233';
+        X.beginPath();X.ellipse(cx-37,cy+20,14,6,0,0,Math.PI*2);X.fill();
+        X.beginPath();X.ellipse(cx+37,cy+20,14,6,0,0,Math.PI*2);X.fill();
+        // Sleeves
+        X.fillStyle='#e0e8f2';X.strokeStyle='#a8b8c8';X.lineWidth=2;
+        X.beginPath();X.roundRect(cx-52,cy+48,30,20,4);X.fill();X.stroke();
+        X.beginPath();X.roundRect(cx+22,cy+48,30,20,4);X.fill();X.stroke();
+        addBlood(cx-37,cy+20,1);addBlood(cx+37,cy+20,1);
+      }
+      drawUpBar(l);drawBox(l);G.rt-=dt;ct(G.inj==='fingers'?'🩸 FINGER AB!!':'🩸 HÄNDE AB!!!',l.W/2,l.H*.15,50,'#ff0000');
+      if(G.rt<=0){G.s=S.AMB;G.amb=true;G.ambX=-300}break;}
+    case S.AMB:{drawDevBase(l);drawUpBar(l);G.ambX+=200*dt;drawAmb(l);drawBlood(dt);drawSev();ct('🚑 KRANKENWAGEN!',l.W/2,l.H*.18,36,'#ff0000');
+      if(G.ambX>l.W/2){ct('💊 Ab ins Krankenhaus...',l.W/2,l.H*.50,26,'#4ecdc4');ct('Klicken → Neustart',l.W/2,l.H*.57,18,'#aaa')}break;}
+    case S.FIRE:{G.fl=Math.min(8,G.fl+dt*2);drawDevBase(l);drawUpBar(l);drawFire(l);ct('🔥 FEUERALARM!',l.W/2,l.H*.15,40,'#ff0000');
+      if(G.fl>5){ct('Das Gerät brennt ab!',l.W/2,l.H*.23,24,'#ffd700');ct('Klicken → Neustart',l.W/2,l.H*.60,18,'#aaa')}G.skX=(Math.random()-.5)*G.fl*3;G.skY=(Math.random()-.5)*G.fl*3;break;}
+    case S.WIN:{G.wA+=dt;drawDevBase(l);drawUpBar(l);for(let i=0;i<40;i++){const cols=['#ff6b35','#4ecdc4','#ffd700','#ff4757','#2ed573','#a855f7'];X.fillStyle=cols[i%cols.length];X.save();X.translate((l.W*.1+i*l.W*.023+G.wA*60*(i%3+1))%l.W,(l.H*.05+G.wA*70*(i%4+1)+i*25)%l.H);X.rotate(G.wA*2+i);X.fillRect(-4,-5,8,10);X.restore()}
+      ct('🏆 VALIDIERUNG BESTANDEN!',l.W/2,l.H*.28,46,'#ffd700');ct(`${G.good} gute · ${G.bad} schlechte`,l.W/2,l.H*.36,24,'#4ecdc4');ct('Schweißprofi!',l.W/2,l.H*.42,22,'#fff');ct('Klicken → Neustart',l.W/2,l.H*.53,18,'#aaa');break;}
+    case S.FIRED:{G.fA+=dt;drawDevBase(l);drawUpBar(l);X.fillStyle=`rgba(255,0,0,${Math.max(0,.22-G.fA*.07)})`;X.fillRect(0,0,l.W,l.H);
+      const ly=Math.min(l.H/2-100,-260+G.fA*360);X.fillStyle='#fffef0';X.strokeStyle=OL;X.lineWidth=4;X.lineJoin='round';X.beginPath();X.roundRect(l.W/2-205,ly,410,255,8);X.fill();X.stroke();
+      ct('KÜNDIGUNG',l.W/2,ly+36,32,'#cc0000');X.fillStyle='#bbb';X.fillRect(l.W/2-135,ly+50,270,2);X.font='bold 14px "Comic Neue",cursive';X.fillStyle='#333';X.textAlign='center';
+      X.fillText('Sehr geehrte/r Mitarbeiter/in,',l.W/2,ly+78);X.fillText('aufgrund von 2 fehlerhaften Siegelnähten',l.W/2,ly+102);X.fillText('wird Ihnen hiermit fristlos gekündigt.',l.W/2,ly+126);X.fillText('Mit freundlichen Grüßen,',l.W/2,ly+162);X.fillText('Die Qualitätssicherung 🏭',l.W/2,ly+186);
+      ct('📄 GEKÜNDIGT!',l.W/2,ly+232,26,'#ff4757');ct('Klicken → Neustart',l.W/2,l.H-45,18,'#aaa');break;}
+  }
+  if(G.flash>0){X.fillStyle=`rgba(255,255,255,${G.flash})`;X.fillRect(0,0,l.W,l.H);G.flash-=dt*3}
+  drawFx();drawCur();X.restore();uHUD();requestAnimationFrame(loop)}
+
+// ==== INPUT ====
+c.addEventListener('mousemove',e=>{G.mx=e.clientX;G.my=e.clientY});
+c.addEventListener('mousedown',e=>{if(e.button!==0)return;iA();const l=L();
+  switch(G.s){
+    case S.PICK:if(inBox(G.mx,G.my,l)&&!G.held&&G.pib<G.need){G.held=G.pib%2===0?'syringe':'tube';addFx('GRAB!',G.mx,G.my-18,'#4ecdc4',26);sClamp()}break;
+    case S.POS:{if(!inDev(G.mx,l)){addFx('DANEBEN!',G.mx,G.my,'#ffa502',26);break}
+      const z=getZone(G.my,l);
+      switch(z){
+        case'empty':sHiss();fail('INS LEERE GESCHWEISST!','#ffa502','PFFFFT!','#ffa502',38);popup('💨 Ins Leere!',2000);break;
+        case'product':G.s=S.MELT;G.meltT=0;G.sx=G.mx;G.sy=G.my;G.bkT=1;sHiss();setTimeout(sClamp,200);setTimeout(()=>{sHumOn();G.hum=true},400);sCrush();addFx('🫠',G.mx,G.my-30,'#ff6600',45);break;
+        case'ideal':G.s=S.SEAL;G.st=0;G.sx=G.mx;G.sy=G.my;addFx('SSSSS...',G.mx,G.my-35,'#ffd700',26);sHiss();setTimeout(sClamp,200);setTimeout(()=>{sHumOn();G.hum=true},400);break;
+        case'fingers':G.s=S.HURT;G.inj='fingers';G.flash=1;G.skX=20;G.skY=20;G.rt=4;G.bkT=1;sClamp();sRip();addFx('SCHNIPP!!',G.mx,G.my,'#ff0000',48);addBlood(G.mx,G.my,40);
+          for(let i=0;i<8;i++)G.sev.push({type:'finger',x:G.mx-35+i*10,y:G.my-10,vx:(Math.random()-.5)*8,vy:-2-Math.random()*5,rot:Math.random()*6,vr:(Math.random()-.5)*.3,mir:false});break;
+        case'hands':G.s=S.HURT;G.inj='hands';G.flash=1;G.skX=30;G.skY=30;G.rt=4;G.bkT=1;sClamp();sRip();addFx('CHOP!!!',G.mx,G.my,'#ff0000',58);addBlood(G.mx,G.my,50);
+          G.sev.push({type:'hand',x:G.mx-40,y:G.my-20,vx:-3,vy:-4,rot:0,vr:-.1,mir:false});G.sev.push({type:'hand',x:G.mx+40,y:G.my-20,vx:3,vy:-4,rot:0,vr:.1,mir:true});break;
+      }break;}
+    case S.AMB:if(G.ambX>c.width/2)fullR();break;case S.FIRE:if(G.fl>5)fullR();break;case S.WIN:case S.FIRED:fullR();break;}});
+c.addEventListener('mouseup',e=>{if(e.button!==0)return;const l=L();
+  switch(G.s){
+    case S.PICK:if(G.held){if(inBag(G.mx,G.my,l)){G.s=S.DROP;G.dA=true;G.dP=G.held;G.dPr=0;G.held=null}
+      else if(onFlr(G.my,l)){G.held=null;sDrop();fail('BODEN!','#ff4757','KLIRR!','#ff4757',36);popup('🚫 Auf den Boden!',2000)}
+      else{G.held=null;addFx('OOPS',G.mx,G.my,'#888',20)}}break;
+    case S.SEAL:{if(G.hum){sHumOff();G.hum=false}sHiss();setTimeout(sRelease,150);document.getElementById('stb').style.display='none';
+      const st=G.st;
+      if(st<17)fail('ZU SCHWACH!','#ff4757','ZU KURZ!','#ff4757',38);
+      else if(st<20){addFx('OK...',G.sx,G.sy-35,'#ffa502',36);G.good++;G.s=S.RES;G.rtx='SIEGELNAHT OK';G.rtc='#ffa502';G.rt=2}
+      else if(st<=25){addFx('PERFEKT!!! ⭐',G.sx,G.sy-35,'#2ed573',46);G.flash=.3;G.good++;G.s=S.RES;G.rtx='⭐ PERFEKTE SIEGELNAHT! ⭐';G.rtc='#2ed573';G.rt=2}
+      else if(st<=30)fail('VERBRANNT!','#ff6b35','ZU LANG!','#ff6b35',38);break;}}});
+c.addEventListener('contextmenu',e=>e.preventDefault());
+function fullR(){if(G.hum){sHumOff();G.hum=false}if(G.alm){sAlarmOff();G.alm=false}const o=G.on;G=fresh();G.on=o;popup('🏭 NEUER VERSUCH!',1500)}
+function startGame(){document.getElementById('ss').style.display='none';document.getElementById('hud').style.display='flex';document.getElementById('calBtn').style.display='block';iA();G.on=true;popup('📦 Produkt aus der grünen Box nehmen!',2500)}
+// Calibration sliders
+['H','F','P','I'].forEach(k=>{const s=document.getElementById('s'+k),v=document.getElementById('v'+k);
+  s.addEventListener('input',()=>{v.textContent=s.value;
+    if(k==='H')zH=+s.value;if(k==='F')zF=+s.value;if(k==='P')zP=+s.value;if(k==='I')zI=+s.value})});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
